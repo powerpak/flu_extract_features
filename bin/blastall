@@ -1,0 +1,3 @@
+#!/bin/bash
+
+legacy_blast.pl blastall "$@" --path $(dirname $(which blastp))

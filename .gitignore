@@ -1,0 +1,7 @@
+out/
+db/*
+*.yaml
+.DS_Store
+!*.dist.yaml
+!db/README.md
+!db/ird_strains.tsv
