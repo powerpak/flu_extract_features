@@ -66,6 +66,10 @@ class Genotype < Model
       end
       row.save && row
     end
+    
+    def from_kmers(kmer_list)
+    end
+    
   end
   
 end
