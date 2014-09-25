@@ -257,10 +257,15 @@ task :update_sequence_features, [:reset] => [:config, "db/protein-a.fasta", "db/
     #       (right now it's just a hash of genes -> lists of VariantCalls)
     # If we weren't killed by problems with applying AA-level alterations, it's time for blastp
     next if pheno_killed.include? pheno.id
+    nmer_counts = {}
     prot_seqs.each do |gene, seqs|
       # TODO: build Ruhana's hash
-      
+      seqs.each do |seq|
+        pp seq.aa_seq
+        # TODO: take each of these seq.aa_seq and use it to fill nmer_counts
+      end
     end
+    pp nmer_counts
     
     # Save all the VariantCalls to the feature and genotype tables.
     # WARNING: This deletes and overwrites the existing genotype for the phenotype!
