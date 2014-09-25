@@ -257,39 +257,9 @@ task :update_sequence_features, [:reset] => [:config, "db/protein-a.fasta", "db/
     #       (right now it's just a hash of genes -> lists of VariantCalls)
     # If we weren't killed by problems with applying AA-level alterations, it's time for blastp
     next if pheno_killed.include? pheno.id
-    var_list = {}
     prot_seqs.each do |gene, seqs|
-      seg_num = config["segments_by_gene"][gene]
-      prefixes = config["prefixes_by_gene"][gene]
-      var_list[gene] = seqs.map do |seq|
-        variant_caller.blastp(seq.aa_seq, gene) do |hit|
-          refname = hit.target_def
-          refname =~ /^[Ss]eg#{seg_num}\D/ && !refname.include?('mature') && prefixes.any?{|p| refname =~ /#{p}(\D|$)/ } 
-        end
-      end
-    end
-    
-    # Apply remaining AA-level and knockout alterations, removing them from the list as we go
-    alterations.reject! do |alt|
-      if Bio::Sequence::AA.is_patch?(alt[:alt]) || alt[:alt] == 'KO'
-        puts "A straggler alteration appeared! #{alt[:gene]}:#{alt[:alt]}"
-        simulated_calls = VariantCalls.new(alt[:gene], alt[:alt])
-        puts "It could not be applied." if !var_list[alt[:gene]]
-        # TODO: Should we remove variants on genes for which we have no GenBank sequences from the list, 
-        # or should they kill the genotype-in-progress?  Hmmm, not sure
-        var_list[alt[:gene]].andand.map! do |var_calls|
-          var_calls + simulated_calls
-        end
-        true
-      end
-    end
-    
-    # Are there any alterations left in the list?  Hopefully not.
-    if alterations.size > 0
-      alterations.each {|alt| puts "Alteration could not be applied! #{alt[:gene]}:#{alt[:alt]}" }
-      pheno_killed << pheno.id
-      puts "Killed."
-      next
+      # TODO: build Ruhana's hash
+      
     end
     
     # Save all the VariantCalls to the feature and genotype tables.
@@ -299,7 +269,7 @@ task :update_sequence_features, [:reset] => [:config, "db/protein-a.fasta", "db/
     # TODO: Refactor into VariantList#save_as_genotype!(pheno)
     pheno.genotypes.each {|geno| geno.delete }
     pheno.reload
-    pheno.genotypes = [Genotype.from_variant_list(var_list)]
+    pheno.genotypes = [] # TODO: build this from Ruhana's hash
   end
   puts "#{complete} complete genomes and #{at_least_one} with >1 complete segment (out of #{Phenotype.count})."
   puts "#{aa_attempts} AA substitutions attempted, #{aa_successes} succeeded."
