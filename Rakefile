@@ -141,11 +141,12 @@ end
 
 
 desc "[3] Compiles GenBank entries, applies alterations, and links phenotypes to sequence features"
-task :update_sequence_features, [:reset] => [:config, "db/protein-a.fasta", "db/blastdb"] do |t, args|
+task :update_sequence_features, [:n, :reset] => [:config, "db/protein-a.fasta", "db/blastdb"] do |t, args|
   MOD_COLS = (1..config["number_mod_cols"]).map{|n| "mod_#{n}"}
   COLS = "id, strain_name, #{MOD_COLS.join ', '}"
   variant_caller = VariantCaller.new(config)
-  
+  n = args.n.to_i
+
   # We could clear all existing genotypes, features, and their relationships to be neat...
   if !args.reset.nil?
     Feature.delete_all and Feature.reset_auto_increment
@@ -257,16 +258,17 @@ task :update_sequence_features, [:reset] => [:config, "db/protein-a.fasta", "db/
     #       (right now it's just a hash of genes -> lists of VariantCalls)
     # If we weren't killed by problems with applying AA-level alterations, it's time for blastp
     next if pheno_killed.include? pheno.id
-    nmer_counts = {}
+
+    # NOTE: build Ruhana's hash of nmer_counts here
+    nmer_counts = Hash.new(0)
     prot_seqs.each do |gene, seqs|
-      # TODO: build Ruhana's hash
       seqs.each do |seq|
-        pp seq.aa_seq
-        # TODO: take each of these seq.aa_seq and use it to fill nmer_counts
+        (0..(seq.aa_seq.length - n)).each do |i|
+          nmer_counts[seq.aa_seq[i...(i + n)]] += 1
+        end
       end
     end
-    pp nmer_counts
-    
+
     # Save all the VariantCalls to the feature and genotype tables.
     # WARNING: This deletes and overwrites the existing genotype for the phenotype!
     # As they are saved, VariantCalls should be checked against their reference, and redundant calls removed
