@@ -259,12 +259,12 @@ task :update_sequence_features, [:n, :reset] => [:config, "db/protein-a.fasta", 
     # If we weren't killed by problems with applying AA-level alterations, it's time for blastp
     next if pheno_killed.include? pheno.id
 
-    # NOTE: build Ruhana's hash of nmer_counts here
-    nmer_counts = Hash.new(0)
+    # NOTE: build Ruhana's hash of kmer_counts here
+    kmer_counts = Hash.new(0)
     prot_seqs.each do |gene, seqs|
       seqs.each do |seq|
         (0..(seq.aa_seq.length - n)).each do |i|
-          nmer_counts[seq.aa_seq[i...(i + n)]] += 1
+          kmer_counts[seq.aa_seq[i...(i + n)]] += 1
         end
       end
     end
@@ -276,7 +276,7 @@ task :update_sequence_features, [:n, :reset] => [:config, "db/protein-a.fasta", 
     # TODO: Refactor into VariantList#save_as_genotype!(pheno)
     pheno.genotypes.each {|geno| geno.delete }
     pheno.reload
-    pheno.genotypes = [] # TODO: build this from Ruhana's hash
+    pheno.genotypes = [Genotype.from_kmer_counts(kmer_counts)]
   end
   puts "#{complete} complete genomes and #{at_least_one} with >1 complete segment (out of #{Phenotype.count})."
   puts "#{aa_attempts} AA substitutions attempted, #{aa_successes} succeeded."

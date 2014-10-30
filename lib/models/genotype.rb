@@ -67,7 +67,13 @@ class Genotype < Model
       row.save && row
     end
     
-    def from_kmers(kmer_list)
+    def from_kmer_counts(kmer_counts)
+      row = self.new
+      kmer_counts.each do |kmer, count|
+        gf_kmer = GenotypeFeature.create_for_feature('kmer', kmer, count, 1.0)
+        row.genotype_features << gf_kmer
+      end
+      row.save && row
     end
     
   end
