@@ -299,9 +299,9 @@ task :make_arff, [:file] => :config do |t, args|
   # First, we need to tabulate all possible features, which become separate @ATTRIBUTE's in the ARFF.
   # Each attribute is nominal and all the possible values also need to be tabulated.
   # We should collect the variant_call features by gene, as well.
-  attr_tree = {:knockout=>[], :reference=>[], :variant_call=>{}}
+  attr_tree = {:knockout=>[], :reference=>[], :variant_call=>{}, :kmer=>[]}
   Feature.select("id, kind, name").find_each do |feat|
-    possible_values = feat.genotype_features.pluck(:value).uniq
+    possible_values = feat.kind != 'kmer' ? feat.genotype_features.pluck(:value).uniq : nil
     if feat.kind == 'variant_call'
       gene, pos = feat.name.split(':')
       (attr_tree[:variant_call][gene] ||= []) << [feat.name, possible_values, pos.to_i]
@@ -328,7 +328,11 @@ task :make_arff, [:file] => :config do |t, args|
       attr_tree[kind] = sub_attrs.sort_by {|attr| attr[0] }
       sub_attrs.each do |attr|
         attr_name = "#{kind}:#{attr[0]}"
-        puts "@ATTRIBUTE \"#{attr_name}\" {#{attr[1].join(',')}}"
+        if kind == :kmer
+          puts "@ATTRIBUTE \"#{attr_name}\" NUMERIC"
+        else
+          puts "@ATTRIBUTE \"#{attr_name}\" {#{attr[1].join(',')}}"
+        end
         attr_cols << attr_name
         attr[3] = attr_cols.size - 1
       end
@@ -376,6 +380,11 @@ task :make_arff, [:file] => :config do |t, args|
         end
       end
       data_vals.map!{|v| v.nil? ? '?' : v }
+      
+      attr_tree[:kmer].each do |attr|
+        gf = g.genotype_features.joins(:feature).where('feature.kind' => 'kmer', 'feature.name'=>attr[0]).first
+        data_vals[attr[3]] = gf ? gf.value : 0
+      end
       
       # Finally add the phenotype data values
       PHENOTYPE_ATTRIBUTES.each do |pa|
